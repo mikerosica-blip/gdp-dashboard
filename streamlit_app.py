@@ -52,7 +52,7 @@ with col1:
                 
                 # Prompt designed to produce exactly 5-6 bullet points with your keywords
                 prompt = f"""
-                You are a 6th grade writing editor. Use middle-school language. 
+                You are a 6th grade writing editor. Use middle-school language.  
                 Start immediately with '### Suggestions:'.
                 LIMIT: Provide exactly 5-6 suggestions total.
                 KEYWORDS: Start every bullet with **ADD**, **REMOVE**, **MOVE**, **SUBSTITUTE**, or **CORRECT** in all caps.
