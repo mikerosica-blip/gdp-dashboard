@@ -7,7 +7,7 @@ st.set_page_config(page_title="6th Grade Editor", layout="wide")
 
 # 2. Custom Styles (Big text for 6th graders)
 st.markdown("""
-    <style>
+    <style> 
     .stTextArea textarea {font-size: 22px !important;}
     .stMarkdown p, .stMarkdown li { font-size: 24px !important; line-height: 1.4; }
     h3 { text-align: left !important; margin-top: 0 !important; }
