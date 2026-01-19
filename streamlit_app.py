@@ -1,151 +1,80 @@
 import streamlit as st
-import pandas as pd
-import math
-from pathlib import Path
+import google.generativeai as genai
+import time
 
-# Set the title and favicon that appear in the Browser's tab bar.
-st.set_page_config(
-    page_title='GDP dashboard',
-    page_icon=':earth_americas:', # This is an emoji shortcode. Could be a URL too.
-)
+# 1. Page Layout (Wide and readable for Chromebooks)
+st.set_page_config(page_title="6th Grade Editor", layout="wide")
 
-# -----------------------------------------------------------------------------
-# Declare some useful functions.
+# 2. Custom Styles (Big text for 6th graders)
+st.markdown("""
+    <style>
+    .stTextArea textarea {font-size: 22px !important;}
+    .stMarkdown p, .stMarkdown li { font-size: 24px !important; line-height: 1.4; }
+    h3 { text-align: left !important; margin-top: 0 !important; }
+    strong { color: #1E88E5; font-weight: 800; }
+    u { text-decoration: underline; color: #D32F2F; font-weight: 700; }
+    </style>
+    """, unsafe_allow_html=True)
 
-@st.cache_data
-def get_gdp_data():
-    """Grab GDP data from a CSV file.
+# 3. Teacher Settings Storage
+if 'guidance' not in st.session_state: st.session_state.guidance = ""
 
-    This uses caching to avoid having to read the file every time. If we were
-    reading from an HTTP endpoint instead of a file, it's a good idea to set
-    a maximum age to the cache with the TTL argument: @st.cache_data(ttl='1d')
-    """
+with st.sidebar:
+    st.header("🔑 Access")
+    pw = st.text_input("Teacher Password:", type="password")
+    
+    if pw == "writebetter": 
+        st.divider()
+        st.header("🍎 Teacher Controls")
+        st.session_state.guidance = st.text_area("Guidance Instructions:", value=st.session_state.guidance)
+        st.success("Admin Mode: Unlocked")
+    else:
+        st.info("Teacher settings are hidden.")
 
-    # Instead of a CSV on disk, you could read from an HTTP endpoint here too.
-    DATA_FILENAME = Path(__file__).parent/'data/gdp_data.csv'
-    raw_gdp_df = pd.read_csv(DATA_FILENAME)
+# 4. Your API Key (Moving to Paid Tier fixes the Error 429)
+api_key = "AIzaSyBS2xMt2Po99bfstI9SRhe_asLH5ixULdE"
 
-    MIN_YEAR = 1960
-    MAX_YEAR = 2022
+# 5. Main App Interface
+col1, col2 = st.columns(2)
 
-    # The data above has columns like:
-    # - Country Name
-    # - Country Code
-    # - [Stuff I don't care about]
-    # - GDP for 1960
-    # - GDP for 1961
-    # - GDP for 1962
-    # - ...
-    # - GDP for 2022
-    #
-    # ...but I want this instead:
-    # - Country Name
-    # - Country Code
-    # - Year
-    # - GDP
-    #
-    # So let's pivot all those year-columns into two: Year and GDP
-    gdp_df = raw_gdp_df.melt(
-        ['Country Code'],
-        [str(x) for x in range(MIN_YEAR, MAX_YEAR + 1)],
-        'Year',
-        'GDP',
-    )
-
-    # Convert years from string to integers
-    gdp_df['Year'] = pd.to_numeric(gdp_df['Year'])
-
-    return gdp_df
-
-gdp_df = get_gdp_data()
-
-# -----------------------------------------------------------------------------
-# Draw the actual page
-
-# Set the title that appears at the top of the page.
-'''
-# :earth_americas: GDP dashboard
-
-Browse GDP data from the [World Bank Open Data](https://data.worldbank.org/) website. As you'll
-notice, the data only goes to 2022 right now, and datapoints for certain years are often missing.
-But it's otherwise a great (and did I mention _free_?) source of data.
-'''
-
-# Add some spacing
-''
-''
-
-min_value = gdp_df['Year'].min()
-max_value = gdp_df['Year'].max()
-
-from_year, to_year = st.slider(
-    'Which years are you interested in?',
-    min_value=min_value,
-    max_value=max_value,
-    value=[min_value, max_value])
-
-countries = gdp_df['Country Code'].unique()
-
-if not len(countries):
-    st.warning("Select at least one country")
-
-selected_countries = st.multiselect(
-    'Which countries would you like to view?',
-    countries,
-    ['DEU', 'FRA', 'GBR', 'BRA', 'MEX', 'JPN'])
-
-''
-''
-''
-
-# Filter the data
-filtered_gdp_df = gdp_df[
-    (gdp_df['Country Code'].isin(selected_countries))
-    & (gdp_df['Year'] <= to_year)
-    & (from_year <= gdp_df['Year'])
-]
-
-st.header('GDP over time', divider='gray')
-
-''
-
-st.line_chart(
-    filtered_gdp_df,
-    x='Year',
-    y='GDP',
-    color='Country Code',
-)
-
-''
-''
-
-
-first_year = gdp_df[gdp_df['Year'] == from_year]
-last_year = gdp_df[gdp_df['Year'] == to_year]
-
-st.header(f'GDP in {to_year}', divider='gray')
-
-''
-
-cols = st.columns(4)
-
-for i, country in enumerate(selected_countries):
-    col = cols[i % len(cols)]
-
-    with col:
-        first_gdp = first_year[first_year['Country Code'] == country]['GDP'].iat[0] / 1000000000
-        last_gdp = last_year[last_year['Country Code'] == country]['GDP'].iat[0] / 1000000000
-
-        if math.isnan(first_gdp):
-            growth = 'n/a'
-            delta_color = 'off'
-        else:
-            growth = f'{last_gdp / first_gdp:,.2f}x'
-            delta_color = 'normal'
-
-        st.metric(
-            label=f'{country} GDP',
-            value=f'{last_gdp:,.0f}B',
-            delta=growth,
-            delta_color=delta_color
-        )
+with col1:
+    draft = st.text_area("Paste your writing here:", height=500, key="student_draft")
+    
+    # Buttons
+    btn_col1, btn_col2 = st.columns([1, 4])
+    with btn_col1:
+        if st.button("Check My Draft"):
+            if not draft:
+                st.warning("Please paste your writing first!")
+            else:
+                try:
+                    genai.configure(api_key=api_key)
+                    # UPDATED: Using Gemini 2.5-Flash to fix the 404 error
+                    model = genai.GenerativeModel('gemini-2.5-flash')
+                    
+                    # Refined Classroom Prompt
+                    prompt = f"""
+                    You are a 6th grade writing editor. Use middle-school language. 
+                    Start immediately with '### Suggestions:'.
+                    LIMIT: Provide exactly 5-6 suggestions total.
+                    KEYWORDS: Start every bullet with **<u>ADD</u>**, **<u>REMOVE</u>**, **<u>MOVE</u>**, **<u>SUBSTITUTE</u>**, or **<u>CORRECT</u>**.
+                    CONTENT-BLIND: Do not discuss story topics.
+                    
+                    TEACHER GUIDANCE: {st.session_state.guidance}
+                    
+                    STUDENT DRAFT:
+                    {draft}
+                    """
+                    
+                    with st.spinner('Checking your work...'):
+                        res = model.generate_content(prompt)
+                        with col2:
+                            st.markdown(res.text, unsafe_allow_html=True)
+                except Exception as e:
+                    if "429" in str(e):
+                        st.error("Too many clicks! Wait 60 seconds.")
+                    else:
+                        st.error(f"Error: {e}")
+    with btn_col2:
+        if st.button("Reset Screen"):
+            st.rerun()
