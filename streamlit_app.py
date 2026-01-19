@@ -4,7 +4,7 @@ import os
 
 # 1. Page Layout (Optimized for 6th Grade Chromebooks)
 st.set_page_config(page_title="6th Grade Editor", layout="wide")
-
+ 
 # 2. Custom Styles (Matches the bold red feedback from your successful test)
 st.markdown("""
     <style>
